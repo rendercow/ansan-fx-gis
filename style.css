@@ -12,3 +12,33 @@
  aside .company-list{height:auto;flex:1}.legend{bottom:9px;left:8px;right:8px;justify-content:space-around;padding:9px 6px;gap:6px;font-size:10px}.map-placeholder p{font-size:12px}.map-placeholder h2{font-size:19px}.detail-content{padding:14px;overscroll-behavior:contain}
  footer{padding:8px 12px 18px} .modal{max-height:90dvh;overflow-y:auto}
 }
+
+/* v0.4: PC retains the three-column view; mobile uses a map-first field interface. */
+.mobile-searchbar,.mobile-bottom-nav,.mobile-map-info,.mobile-sheet-close{display:none}
+@media(max-width:700px){
+ body{background:#f2f6f9}header{height:60px;padding:7px 12px}.logo{font-size:23px}.brand strong{font-size:12px}.brand small{font-size:10px;margin-top:2px}.brand{gap:8px}.header-right .secondary{font-size:10px;padding:7px}.demo{display:none}
+ .mobile-toolbar,.metrics{display:none!important}
+ .mobile-searchbar{display:block;position:relative;z-index:5;padding:9px 10px 7px;background:#f2f6f9}
+ .mobile-searchrow{display:flex;align-items:center;gap:7px;background:white;border:1px solid #d8e4ed;border-radius:13px;padding:6px 7px;box-shadow:0 2px 8px #1b394810}
+ .mobile-searchrow .glass{font-size:23px;color:#3f6d90;padding-left:6px}.mobile-searchrow input{min-width:0;flex:1;border:0;outline:0;font:inherit;font-size:14px;padding:8px 2px;background:transparent}
+ .mobile-searchrow button{background:#e4eff8;color:#205b86;padding:9px 11px;font-size:12px;border-radius:9px}
+ .mobile-filters:not([hidden]){display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}.mobile-filters select{height:38px}
+ main{display:block;padding:0 9px;height:auto;min-height:0}main aside,main .details,main .map-area{display:none;margin:0;width:100%}
+ main[data-mobile-tab="map"] .map-area{display:block;position:relative;height:calc(100dvh - 193px);min-height:340px;border-radius:14px;margin-bottom:0}
+ .mobile-map-info{display:flex;justify-content:space-between;align-items:center;position:absolute;left:10px;right:10px;top:10px;z-index:4;pointer-events:none}
+ .mobile-map-info span{background:#fffefef0;padding:8px 11px;border-radius:16px;box-shadow:0 2px 7px #0002;font-size:12px;font-weight:700;color:#244c68}
+ .mobile-map-info button{pointer-events:auto;background:#fff;color:#286389;padding:8px 11px;border:1px solid #dae7ee;border-radius:16px;box-shadow:0 2px 7px #0002;font-size:11px}
+ .legend{left:8px;right:8px;bottom:12px;justify-content:space-around;gap:5px;font-size:10px;padding:8px 5px}
+ .mobile-bottom-nav{display:grid;grid-template-columns:repeat(3,1fr);position:fixed;bottom:0;left:0;right:0;min-height:66px;padding:6px 6px max(6px,env(safe-area-inset-bottom));background:#fff;box-shadow:0 -2px 12px #142f4720;z-index:11}
+ .mobile-bottom-nav button{display:flex;align-items:center;flex-direction:column;justify-content:center;gap:2px;background:transparent;color:#738496;font-size:11px;padding:2px 3px;border-radius:10px}.mobile-bottom-nav button span{font-size:24px;line-height:1}.mobile-bottom-nav button.active{color:#146ba1;background:#eaf4fa}
+ main[data-mobile-tab="list"] aside{display:flex;flex-direction:column;height:calc(100dvh - 193px);min-height:330px}main[data-mobile-tab="list"] aside .company-list{height:auto;flex:1}
+ main[data-mobile-tab="detail"] .details{display:block;height:calc(100dvh - 193px);min-height:330px}
+ body.sheet-open main[data-mobile-tab="map"] .details{display:block;position:fixed;left:0;bottom:calc(66px + env(safe-area-inset-bottom));z-index:10;height:min(56dvh,500px);min-height:250px;border-radius:20px 20px 0 0;box-shadow:0 -12px 35px #0b253954;border:1px solid #c9dbe7;overflow:hidden}
+ body.sheet-open main[data-mobile-tab="map"] .details:before{content:'';position:absolute;top:6px;left:calc(50% - 19px);height:4px;width:38px;border-radius:6px;background:#bfced9;z-index:2}
+ body.sheet-open .details .panel-head{padding-top:10px;height:54px}
+ .mobile-sheet-close{display:block;background:#e8f0f5;color:#365d77;padding:4px 9px;border-radius:50%;font-size:15px}
+ main[data-mobile-tab="detail"] .mobile-sheet-close{display:none}
+ .detail-content{overflow-y:auto;overscroll-behavior:contain;padding:13px}
+ footer{display:none}
+}
+@media(max-width:370px){.brand strong{font-size:11px}.logo{font-size:20px}.header-right .secondary{font-size:9px;padding:6px}.brand small{font-size:9px}}
