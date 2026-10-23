@@ -1,6 +1,6 @@
 'use strict';
 const $=id=>document.getElementById(id);
-const state={companies:[],results:[],map:null,geocoder:null,markers:[],selected:null,busy:false,coords:{},key:(window.FXGIS_CONFIG?.kakaoJavaScriptKey||localStorage.getItem('fxgis_kakao_js_key')||'')};
+const state={companies:[],results:[],map:null,geocoder:null,markers:[],clusterer:null,selected:null,busy:false,coords:{},key:(window.FXGIS_CONFIG?.kakaoJavaScriptKey||localStorage.getItem('fxgis_kakao_js_key')||'')};
 const norm=v=>v==null?'':String(v).trim();
 const num=v=>{const n=Number(v);return Number.isFinite(n)?n:0};
 const esc=s=>norm(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -25,7 +25,7 @@ function ingest(wb){
  }
  state.companies=entries;state.selected=null;document.body.classList.remove('sheet-open');filter();renderDetail();setStatus(`업체 ${entries.length}개 로드 완료 (가상자료) · 좌표 미확인 ${entries.filter(c=>c.lat===null).length}건`);if(state.geocoder)geocodeAll();
 }
-function filter(){const s=norm($('search').value).toLowerCase(),d=$('district').value,g=$('risk').value;state.results=state.companies.filter(c=>(!d||c.district===d)&&(!g||c.grade===g)&&(!s||[c.name,c.owner,c.address,c.id].some(v=>v.toLowerCase().includes(s))));renderList();renderMarkers();updateCounts();}
+function filter(){const s=norm($('search').value).toLowerCase(),d=$('district').value,g=$('risk').value;state.results=state.companies.filter(c=>(!d||c.district===d)&&(!g||(g==='좌표 미확인'?c.lat===null:c.grade===g))&&(!s||[c.name,c.owner,c.address,c.id].some(v=>v.toLowerCase().includes(s))));renderList();renderMarkers();updateCounts();syncRiskButtons();}
 function updateCounts(){const c=state.companies;$('countAll').textContent=fmt(c.length);$('countHigh').textContent=fmt(c.filter(x=>x.grade==='고위험').length);$('countMid').textContent=fmt(c.filter(x=>x.grade==='주의').length);$('countLow').textContent=fmt(c.filter(x=>x.grade==='일반').length);$('countMapped').textContent=fmt(c.filter(x=>x.lat!==null).length);$('rowsLabel').textContent=`${state.results.length}개 표시`; if($('mobileMapCount'))$('mobileMapCount').textContent=`표시 대상 ${state.results.length}개 · 지도 ${state.results.filter(x=>x.lat!==null).length}개`; }
 function riskClass(grade){return grade==='고위험'?'high':grade==='주의'?'mid':grade==='일반'?'low':'gray'}
 function renderList(){const list=$('companyList');list.replaceChildren();for(const c of state.results){const el=document.createElement('div');el.className='company'+(c.id===state.selected?' active':'');el.innerHTML=`<i class="risk-dot ${riskClass(c.grade)}"></i><div><div class="company-name">${esc(c.name)}</div><div class="company-sub">${esc(c.id)} · ${esc(c.district)} · ${esc(c.grade)} ${c.score}점</div><small>${c.lat===null?'⚪ 좌표 미확인':'📍 지도 표시 가능'} · ${esc(c.status)}</small></div>`;el.onclick=()=>selectCompany(c.id,true);list.append(el);}}
@@ -36,9 +36,48 @@ function renderDetail(){const c=state.companies.find(x=>x.id===state.selected);c
  $('detailContent').innerHTML=`<h3 class="detail-title">${esc(c.name)}</h3><div class="detail-sub">${esc(c.id)} · 100% 가상 업체</div>${field('대표자',c.owner)}${field('소재지',c.address)}${field('영업상태',c.status)}${field('등록일',c.registered)}${field('좌표 검증',c.geoStatus)}<div class="section-title">위험도 평가</div><div class="score"><b>${c.score}</b><span>/ 100점 · ${esc(c.grade)}</span></div>${field('실적변동',norm(c.risk['실적변동점수(최대30)'])+' / 30')}${field('점검경과',norm(c.risk['점검경과점수(최대20)'])+' / 20')}${field('위반이력',norm(c.risk['위반이력점수(최대30)'])+' / 30')}${field('영업상태',norm(c.risk['휴폐업등점수(최대20)'])+' / 20')}<div class="section-title">환전실적</div>${byYear}<div class="section-title">점검이력</div>${checks}`;
 }
 function selectCompany(id,pan){state.selected=id; if(window.innerWidth<=700){if($('main').dataset.mobileTab==='map'){document.body.classList.add('sheet-open');}else{setMobileTab('detail');}}const c=state.companies.find(x=>x.id===id);renderDetail();renderList();if(c&&pan&&state.map&&c.lat!==null){state.map.panTo(new kakao.maps.LatLng(c.lat,c.lng));state.map.setLevel(Math.min(state.map.getLevel(),5));}}
-function clearMarkers(){for(const m of state.markers)m.setMap(null);state.markers=[]}
-function renderMarkers(){if(!state.map)return;clearMarkers();const overlaps={};for(const c of state.results){if(c.lat===null)continue;const pair=c.lat.toFixed(6)+','+c.lng.toFixed(6);const offset=overlaps[pair]||0;overlaps[pair]=offset+1;const ring=offset===0?0:Math.ceil(offset/8);const angle=(offset%8)*Math.PI/4;const deltaLat=ring*0.00013*Math.sin(angle),deltaLng=ring*0.00016*Math.cos(angle);const colors={high:'#d94658',mid:'#e6a329',low:'#21ad80',gray:'#8493a2'};const color=colors[riskClass(c.grade)];const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="30" height="39" viewBox="0 0 30 39"><path d="M15 1C7 1 1 7 1 15c0 10 14 23 14 23s14-13 14-23C29 7 23 1 15 1Z" fill="${color}" stroke="white" stroke-width="2"/><circle cx="15" cy="15" r="6" fill="white"/></svg>`;const image=new kakao.maps.MarkerImage('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg),new kakao.maps.Size(30,39),{offset:new kakao.maps.Point(15,39)});const marker=new kakao.maps.Marker({map:state.map,position:new kakao.maps.LatLng(c.lat+deltaLat,c.lng+deltaLng),image,title:c.name});kakao.maps.event.addListener(marker,'click',()=>selectCompany(c.id,true));state.markers.push(marker);}}
-function loadKakao(key){if(state.map){setStatus('이미 지도가 연결되었습니다. 키 변경은 페이지 새로고침 후 적용하세요.');return;}$('keyStatus').textContent='지도 SDK 불러오는 중…';const script=document.createElement('script');script.src=`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(key)}&libraries=services&autoload=false`;script.onload=()=>{if(!window.kakao?.maps){$('keyStatus').textContent='Kakao SDK 로드 실패. 도메인과 키를 확인하세요.';return;}kakao.maps.load(()=>{try{state.map=new kakao.maps.Map($('map'),{center:new kakao.maps.LatLng(37.3219,126.8309),level:8});state.geocoder=new kakao.maps.services.Geocoder();$('mapPlaceholder').style.display='none';$('modal').classList.remove('open');renderMarkers();setStatus('카카오맵 연결 완료 · 가상업체 주소 변환 준비');if(state.companies.length)geocodeAll();}catch(e){$('keyStatus').textContent='지도 초기화 실패: '+e.message;}})};script.onerror=()=>{$('keyStatus').textContent='SDK 로드 실패: 키·도메인·기관망 접근 허용 여부를 확인하세요.'};document.head.appendChild(script);}
+function clearMarkers(){if(state.clusterer)state.clusterer.clear();for(const m of state.markers)m.setMap(null);state.markers=[]}
+function renderMarkers(){
+ if(!state.map)return;
+ clearMarkers();
+ const overlaps={};
+ // 동일 주소는 작은 링 형태로 분리하되, 축소 지도에서는 클러스터 숫자로 표시합니다.
+ const ordered=state.results.filter(c=>c.lat!==null).sort((a,b)=>({일반:0,주의:1,고위험:2}[a.grade]||0)-({일반:0,주의:1,고위험:2}[b.grade]||0));
+ for(const c of ordered){
+  const pair=c.lat.toFixed(6)+','+c.lng.toFixed(6);
+  const offset=overlaps[pair]||0;overlaps[pair]=offset+1;
+  const ring=offset===0?0:Math.ceil(offset/8);
+  const angle=(offset%8)*Math.PI/4;
+  const deltaLat=ring*0.00016*Math.sin(angle),deltaLng=ring*0.00020*Math.cos(angle);
+  const colors={high:'#d94658',mid:'#e6a329',low:'#21ad80',gray:'#8493a2'};
+  const color=colors[riskClass(c.grade)];
+  const svg=`<svg xmlns="http://www.w3.org/2000/svg" width="30" height="39" viewBox="0 0 30 39"><path d="M15 1C7 1 1 7 1 15c0 10 14 23 14 23s14-13 14-23C29 7 23 1 15 1Z" fill="${color}" stroke="white" stroke-width="2"/><circle cx="15" cy="15" r="6" fill="white"/></svg>`;
+  const image=new kakao.maps.MarkerImage('data:image/svg+xml;charset=utf-8,'+encodeURIComponent(svg),new kakao.maps.Size(30,39),{offset:new kakao.maps.Point(15,39)});
+  const marker=new kakao.maps.Marker({position:new kakao.maps.LatLng(c.lat+deltaLat,c.lng+deltaLng),image,title:c.name,zIndex:c.grade==='고위험'?30:c.grade==='주의'?20:10});
+  kakao.maps.event.addListener(marker,'click',()=>selectCompany(c.id,true));
+  state.markers.push(marker);
+ }
+ if(state.clusterer)state.clusterer.addMarkers(state.markers);
+ else for(const m of state.markers)m.setMap(state.map);
+}
+function fitAllMarkers(){
+ if(!state.map)return;
+ const found=state.results.filter(c=>c.lat!==null);
+ if(!found.length){state.map.setCenter(new kakao.maps.LatLng(37.3219,126.8309));state.map.setLevel(9);return;}
+ const bounds=new kakao.maps.LatLngBounds();
+ for(const c of found)bounds.extend(new kakao.maps.LatLng(c.lat,c.lng));
+ state.map.setBounds(bounds,42,42,42,42);
+ document.body.classList.remove('sheet-open');
+}
+function syncRiskButtons(){
+ const current=$('risk').value;
+ for(const btn of document.querySelectorAll('[data-grade]')){
+  btn.classList.toggle('active',btn.dataset.grade===current);
+  btn.setAttribute('aria-pressed',String(btn.dataset.grade===current));
+ }
+ if($('mobileRisk'))$('mobileRisk').value=current;
+}
+function loadKakao(key){if(state.map){setStatus('이미 지도가 연결되었습니다. 키 변경은 페이지 새로고침 후 적용하세요.');return;}$('keyStatus').textContent='지도 SDK 불러오는 중…';const script=document.createElement('script');script.src=`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(key)}&libraries=services,clusterer&autoload=false`;script.onload=()=>{if(!window.kakao?.maps){$('keyStatus').textContent='Kakao SDK 로드 실패. 도메인과 키를 확인하세요.';return;}kakao.maps.load(()=>{try{state.map=new kakao.maps.Map($('map'),{center:new kakao.maps.LatLng(37.3219,126.8309),level:8});state.geocoder=new kakao.maps.services.Geocoder();state.clusterer=new kakao.maps.MarkerClusterer({map:state.map,averageCenter:true,minLevel:5,disableClickZoom:false,styles:[{width:'42px',height:'42px',background:'#195d93eb',border:'3px solid white',borderRadius:'50%',color:'#fff',textAlign:'center',fontWeight:'bold',lineHeight:'36px',boxShadow:'0 2px 10px #1234'}]});$('mapPlaceholder').style.display='none';$('modal').classList.remove('open');renderMarkers();setStatus('카카오맵 연결 완료 · 가상업체 주소 변환 준비');if(state.companies.length)geocodeAll();}catch(e){$('keyStatus').textContent='지도 초기화 실패: '+e.message;}})};script.onerror=()=>{$('keyStatus').textContent='SDK 로드 실패: 키·도메인·기관망 접근 허용 여부를 확인하세요.'};document.head.appendChild(script);}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 function geocodeOne(address){return new Promise(resolve=>{let settled=false;const timeout=setTimeout(()=>{if(!settled){settled=true;resolve(null)}},8500);try{state.geocoder.addressSearch(address,(rows,status)=>{if(settled)return;settled=true;clearTimeout(timeout);if(status!==kakao.maps.services.Status.OK||!rows?.length)return resolve(null);const r=rows[0],lat=Number(r.y),lng=Number(r.x);if(!(lat>=37.20&&lat<=37.45&&lng>=126.55&&lng<=127.05))return resolve(null);resolve({lat,lng});});}catch(e){if(!settled){settled=true;clearTimeout(timeout);resolve(null)}}});}
 async function geocodeAll(){
@@ -85,7 +124,7 @@ $('bottomMap').onclick=()=>setMobileTab('map');
 $('bottomList').onclick=()=>setMobileTab('list');
 $('bottomDetail').onclick=()=>setMobileTab('detail');
 $('mobileSheetClose').onclick=()=>document.body.classList.remove('sheet-open');
-$('mobileAllBtn').onclick=()=>{if(!state.map)return;state.map.setCenter(new kakao.maps.LatLng(37.3219,126.8309));state.map.setLevel(8);document.body.classList.remove('sheet-open');};
+$('mobileAllBtn').onclick=fitAllMarkers;
 $('mobileSearch').addEventListener('input',e=>{$('search').value=e.target.value;filter();});
 $('mobileDistrict').addEventListener('change',e=>{$('district').value=e.target.value;filter();});
 $('mobileRisk').addEventListener('change',e=>{$('risk').value=e.target.value;filter();});
@@ -97,10 +136,12 @@ window.addEventListener('keydown',e=>{if(e.key==='Escape')document.body.classLis
 
 (async function bootDemo(){
  try{
-  const resp=await fetch('./demo-data.json?v=0.4.0');if(!resp.ok)throw Error('HTTP '+resp.status);
+  const resp=await fetch('./demo-data.json?v=0.4.1');if(!resp.ok)throw Error('HTTP '+resp.status);
   const data=await resp.json();const wb={Sheets:{}};
   for(const [name,rows] of Object.entries(data))wb.Sheets[name]={__rows:rows};
   // readTable() supports compact pre-parsed demo data and ordinary XLSX imports.
   ingest(wb);
  }catch(e){setStatus('기본 가상 데이터 로드 오류: '+e.message+' · 엑셀 업로드는 가능합니다.');}
 })();
+
+for(const btn of document.querySelectorAll('[data-grade]'))btn.addEventListener('click',()=>{const grade=btn.dataset.grade;$('risk').value=grade;if($('mobileRisk'))$('mobileRisk').value=grade;filter();if(grade==='좌표 미확인')setMobileTab('list');else {setMobileTab('map');fitAllMarkers();}});

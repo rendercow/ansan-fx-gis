@@ -42,3 +42,15 @@
  footer{display:none}
 }
 @media(max-width:370px){.brand strong{font-size:11px}.logo{font-size:20px}.header-right .secondary{font-size:9px;padding:6px}.brand small{font-size:9px}}
+
+/* v0.4.1 모바일 위험등급 필터: 범례가 아닌 클릭 가능한 버튼 */
+.mobile-grade-chips{display:none}
+@media(max-width:700px){
+ .mobile-grade-chips{display:flex;gap:6px;overflow-x:auto;overscroll-behavior-x:contain;padding:4px 0 7px;scrollbar-width:none}
+ .mobile-grade-chips::-webkit-scrollbar{display:none}
+ .mobile-grade-chips button{flex:0 0 auto;border:1px solid #cddce8;color:#3c5b74;background:#fff;border-radius:18px;padding:8px 11px;font-size:12px;min-height:36px}
+ .mobile-grade-chips button.active{background:#155f92;color:#fff;border-color:#155f92}
+ main[data-mobile-tab="map"] .map-area{height:calc(100dvh - 244px)}
+ main[data-mobile-tab="list"] aside,main[data-mobile-tab="detail"] .details{height:calc(100dvh - 244px)}
+ .legend{pointer-events:none;font-size:9px}
+}
