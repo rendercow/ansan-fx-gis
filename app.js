@@ -16,14 +16,21 @@ function ingest(wb){
  for(const r of risks)rMap.set(norm(r['업체ID']),r);
  const seen=new Set();const entries=[];
  for(const r of bases){const id=norm(r['업체ID']);if(!id||seen.has(id))continue;seen.add(id);
-  const district=norm(r['구']);if(!['상록구','단원구'].includes(district))continue;
+  const district=norm(r['구']);if(!id)continue;
   const address=norm(r['도로명주소(미검증)']);const risk=rMap.get(id)||{};
   const lat=Number(r['위도']),lng=Number(r['경도']);
-  const validCoord=norm(r['위도'])!==''&&norm(r['경도'])!==''&&lat>=37.20&&lat<=37.45&&lng>=126.55&&lng<=127.05;
+  const validCoord=norm(r['위도'])!==''&&norm(r['경도'])!==''&&lat>=37.10&&lat<=37.80&&lng>=126.45&&lng<=127.30;
   const saved=state.coords[id];const cached=!state.demoMode&&saved&&saved.address===address?saved:null;
   entries.push({id,name:norm(r['상호(가상)']),owner:norm(r['대표자(가상)']),district,address,registered:norm(r['등록일(가상)']),status:norm(r['영업상태']),phone:norm(r['전화번호(가상)']||r['전화번호']),r,perf:pMap.get(id)||[],checks:cMap.get(id)||[],risk:risk,grade:['고위험','주의','일반'].includes(norm(risk['위험등급']))?norm(risk['위험등급']):'미평가',score:num(risk['위험도합계']),lat:cached?cached.lat:validCoord?lat:null,lng:cached?cached.lng:validCoord?lng:null,geoStatus:cached?'확인완료':validCoord?'제공좌표':'미확인'});
  }
- state.companies=entries;state.selected=null;closeSheet();filter();renderDetail();setStatus(`업체 ${entries.length}개 로드 완료 (가상자료) · 좌표 미확인 ${entries.filter(c=>c.lat===null).length}건`);if(state.geocoder)geocodeAll();
+ state.companies=entries;refreshAreaOptions();$('district').value='';$('mobileDistrict').value='';state.selected=null;closeSheet();filter();renderDetail();setStatus(`업체 ${entries.length}개 로드 완료 (가상자료) · 좌표 미확인 ${entries.filter(c=>c.lat===null).length}건`);if(state.geocoder)geocodeAll();
+}
+function refreshAreaOptions(){
+ const areas=[...new Set(state.companies.map(c=>c.district).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
+ for(const id of ['district','mobileDistrict']){
+  const sel=$(id);sel.replaceChildren();const all=document.createElement('option');all.value='';all.textContent='전체 지역';sel.append(all);
+  for(const a of areas){const op=document.createElement('option');op.value=a;op.textContent=a;sel.append(op);}
+ }
 }
 function chooseStatFilter(grade){
  $('risk').value=grade==='지도'?'':grade;
@@ -101,7 +108,7 @@ function syncRiskButtons(){
 }
 function loadKakao(key){if(state.map){setStatus('이미 지도가 연결되었습니다. 키 변경은 페이지 새로고침 후 적용하세요.');return;}$('keyStatus').textContent='지도 SDK 불러오는 중…';const script=document.createElement('script');script.src=`https://dapi.kakao.com/v2/maps/sdk.js?appkey=${encodeURIComponent(key)}&libraries=services,clusterer&autoload=false`;script.onload=()=>{if(!window.kakao?.maps){$('keyStatus').textContent='Kakao SDK 로드 실패. 도메인과 키를 확인하세요.';return;}kakao.maps.load(()=>{try{state.map=new kakao.maps.Map($('map'),{center:new kakao.maps.LatLng(37.3219,126.8309),level:8});state.geocoder=new kakao.maps.services.Geocoder();state.clusterer=new kakao.maps.MarkerClusterer({map:state.map,averageCenter:true,minLevel:5,disableClickZoom:false,styles:[{width:'42px',height:'42px',background:'#195d93eb',border:'3px solid white',borderRadius:'50%',color:'#fff',textAlign:'center',fontWeight:'bold',lineHeight:'36px',boxShadow:'0 2px 10px #1234'}]});$('mapPlaceholder').style.display='none';$('modal').classList.remove('open');renderMarkers();setStatus('카카오맵 연결 완료 · 가상업체 주소 변환 준비');if(state.companies.length)geocodeAll();}catch(e){$('keyStatus').textContent='지도 초기화 실패: '+e.message;}})};script.onerror=()=>{$('keyStatus').textContent='SDK 로드 실패: 키·도메인·기관망 접근 허용 여부를 확인하세요.'};document.head.appendChild(script);}
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
-function geocodeOne(address){return new Promise(resolve=>{let settled=false;const timeout=setTimeout(()=>{if(!settled){settled=true;resolve(null)}},8500);try{state.geocoder.addressSearch(address,(rows,status)=>{if(settled)return;settled=true;clearTimeout(timeout);if(status!==kakao.maps.services.Status.OK||!rows?.length)return resolve(null);const r=rows[0],lat=Number(r.y),lng=Number(r.x);if(!(lat>=37.20&&lat<=37.45&&lng>=126.55&&lng<=127.05))return resolve(null);resolve({lat,lng});});}catch(e){if(!settled){settled=true;clearTimeout(timeout);resolve(null)}}});}
+function geocodeOne(address){return new Promise(resolve=>{let settled=false;const timeout=setTimeout(()=>{if(!settled){settled=true;resolve(null)}},8500);try{state.geocoder.addressSearch(address,(rows,status)=>{if(settled)return;settled=true;clearTimeout(timeout);if(status!==kakao.maps.services.Status.OK||!rows?.length)return resolve(null);const r=rows[0],lat=Number(r.y),lng=Number(r.x);if(!(lat>=37.10&&lat<=37.80&&lng>=126.45&&lng<=127.30))return resolve(null);resolve({lat,lng});});}catch(e){if(!settled){settled=true;clearTimeout(timeout);resolve(null)}}});}
 function demoOffset(seed,index,total){
  // 시연 전용: 주소 기준점에서 약 0.4~1.3km 떨어진 분산 좌표. 주소 검증값으로 사용 금지.
  let h=2166136261;for(const ch of seed){h=Math.imul(h^ch.charCodeAt(0),16777619)>>>0;}
@@ -118,7 +125,7 @@ async function geocodeAll(){
  const groups=new Map();for(const c of pending){if(!groups.has(c.address))groups.set(c.address,[]);groups.get(c.address).push(c);}
  let ok=0,fail=0,i=0;
  for(const [address,group] of groups){
-  i++;setStatus(`안산시 전역 위치 확인 중 ${i}/${groups.size}개 주소 · 성공 ${ok} / 실패 ${fail}`);
+  i++;setStatus(`수도권 업체 위치 확인 중 ${i}/${groups.size}개 주소 · 성공 ${ok} / 실패 ${fail}`);
   const pos=await geocodeOne(address);
   for(let j=0;j<group.length;j++){const c=group[j];if(pos){
    const o=state.demoMode?demoOffset(address,j,group.length):{dLat:0,dLng:0};
@@ -132,8 +139,8 @@ async function geocodeAll(){
  setStatus(`가상업체 ${state.companies.length}개 · 지도표시 ${state.companies.filter(c=>c.lat!==null).length}개\n마커는 시연용 분산 위치이며 실제 소재지와 일치하지 않습니다.`);if(state.demoMode)fitAllMarkers();
 }
 function csvEscape(v){return '"'+norm(v).replace(/"/g,'""')+'"'}
-function exportCsv(){if(!state.companies.length)return setStatus('먼저 엑셀을 불러오세요.');const heads=['업체ID','상호','대표자','주소','구','영업상태','위험등급','위험점수','위도','경도','좌표상태'];const lines=[heads.map(csvEscape).join(',')];for(const c of state.companies)lines.push([c.id,c.name,c.owner,c.address,c.district,c.status,c.grade,c.score,c.lat??'',c.lng??'',c.geoStatus].map(csvEscape).join(','));const blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='안산_환전업자_좌표변환결과.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-$('fileInput').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;if(!window.XLSX)return setStatus('엑셀 파서 로드 실패. SheetJS CDN 접근을 확인하세요.');try{state.demoMode=false;setStatus('엑셀 파싱 중…');const bytes=await file.arrayBuffer();const wb=XLSX.read(bytes,{type:'array',cellDates:false});ingest(wb);}catch(err){setStatus('엑셀 읽기 실패: '+err.message);}e.target.value='';});
+function exportCsv(){if(!state.companies.length)return setStatus('먼저 엑셀을 불러오세요.');const heads=['업체ID','상호','대표자','주소','구','영업상태','위험등급','위험점수','위도','경도','좌표상태'];const lines=[heads.map(csvEscape).join(',')];for(const c of state.companies)lines.push([c.id,c.name,c.owner,c.address,c.district,c.status,c.grade,c.score,c.lat??'',c.lng??'',c.geoStatus].map(csvEscape).join(','));const blob=new Blob(['\uFEFF'+lines.join('\r\n')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='수도권_환전업자_좌표변환결과.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+$('fileInput').addEventListener('change',async e=>{const file=e.target.files?.[0];if(!file)return;if(!window.XLSX)return setStatus('엑셀 파서 로드 실패. SheetJS CDN 접근을 확인하세요.');try{setStatus('엑셀 파싱 중…');const bytes=await file.arrayBuffer();const wb=XLSX.read(bytes,{type:'array',cellDates:false});state.demoMode=false;ingest(wb);}catch(err){setStatus('엑셀 읽기 실패: '+err.message);}e.target.value='';});
 for(const id of ['search','district','risk'])$(id).addEventListener(id==='search'?'input':'change',filter);
 $('geocodeBtn').onclick=geocodeAll;$('exportBtn').onclick=exportCsv;
 function showModal(){$('apiKey').value=state.key;$('modal').classList.add('open');$('keyStatus').textContent='';}
