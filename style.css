@@ -106,3 +106,6 @@
 .route-endpoint{display:inline-block;padding:4px 8px;border:2px solid white;border-radius:13px;background:#18744f;color:#fff;font-weight:800;font-size:11px;box-shadow:0 2px 6px #1e364b55;white-space:nowrap}
 .route-endpoint.finish{background:#cf4052}
 .route-direction{display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:50%;border:1px solid #d8e6f0;background:#fffffff2;color:#2268a4;box-shadow:0 1px 4px #1234;font-size:15px;line-height:1;pointer-events:none}
+
+/* v0.5.2: 통일된 단색 SVG 버튼 (이모지 대신 선형 아이콘) */
+.contact-action{font-size:initial;line-height:1}.contact-action svg{display:block;stroke:currentColor;flex-shrink:0}.contact-action.phone{background:#edf8f1;color:#23804b}.contact-action.car{background:#edf5fa;color:#226497}
