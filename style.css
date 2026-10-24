@@ -89,3 +89,20 @@
  body.sheet-open .mobile-sheet-close{display:block}
 }
 @media(min-width:701px){.nearby,.mobile-list-table,.sheet-handle{display:none}}
+/* v0.5.1 refinements */
+.result-name-wrap b,.near-name{display:flex!important;align-items:center;gap:7px;min-width:0}
+.result-name-wrap .risk-dot,.near-name .risk-dot{display:inline-block;width:8px;height:8px;flex:0 0 8px;border-radius:50%;margin:0}
+/* Match the existing risk-color palette exactly. */
+.result-name-wrap .risk-dot.high,.near-name .risk-dot.high{background:#dc4758}
+.result-name-wrap .risk-dot.mid,.near-name .risk-dot.mid{background:#e6ac2e}
+.result-name-wrap .risk-dot.low,.near-name .risk-dot.low{background:#2db78b}
+.route-planner{position:relative}.route-planner>.route-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.route-planner>.route-heading #routeClear{margin:0}
+.route-stop-label{min-width:0;overflow-wrap:anywhere}
+.nearby-actions button.active-origin{background:#11649e!important;color:#fff!important;border-color:#11649e!important}
+.contact-value{display:flex;align-items:center;justify-content:space-between;gap:7px;min-width:0}.contact-value strong{min-width:0}
+.contact-action{flex:0 0 auto;width:34px;height:32px;padding:0;display:grid;place-items:center;border:1px solid #d5e1eb;border-radius:9px;font-size:18px;background:#edf5fa;color:#226497;cursor:default}
+.contact-action.phone{background:#edf8f1;color:#23804b}
+.route-endpoint{display:inline-block;padding:4px 8px;border:2px solid white;border-radius:13px;background:#18744f;color:#fff;font-weight:800;font-size:11px;box-shadow:0 2px 6px #1e364b55;white-space:nowrap}
+.route-endpoint.finish{background:#cf4052}
+.route-direction{display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:50%;border:1px solid #d8e6f0;background:#fffffff2;color:#2268a4;box-shadow:0 1px 4px #1234;font-size:15px;line-height:1;pointer-events:none}
