@@ -109,3 +109,13 @@
 
 /* v0.5.2: 통일된 단색 SVG 버튼 (이모지 대신 선형 아이콘) */
 .contact-action{font-size:initial;line-height:1}.contact-action svg{display:block;stroke:currentColor;flex-shrink:0}.contact-action.phone{background:#edf8f1;color:#23804b}.contact-action.car{background:#edf5fa;color:#226497}
+
+/* v0.5.5: 모바일 지도 상단 지역 선택 + 현재 조건의 업체 수 */
+@media (max-width:700px){
+ .mobile-map-info{gap:8px;right:10px;left:10px;top:10px;align-items:center}
+ .mobile-map-region{display:flex;align-items:center;min-width:0;max-width:calc(100% - 94px);pointer-events:auto;background:rgba(255,255,255,.96);border:1px solid #d7e4ed;border-radius:18px;padding:3px 8px;box-shadow:0 2px 7px #0002;gap:5px}
+ .mobile-map-region select{width:auto;min-width:0;max-width:145px;flex:1 1 auto;background:transparent;border:0;border-radius:10px;padding:7px 15px 7px 4px;color:#24516f;font-size:12px;font-weight:700;line-height:1.2;appearance:auto;box-shadow:none}
+ .mobile-map-region #mobileMapCount{padding:0 2px;background:none;box-shadow:none;white-space:nowrap;border-radius:0;font-size:12px;color:#22699b;font-weight:800}
+ .mobile-map-info #mobileAllBtn{flex:0 0 auto;border-radius:18px;font-size:11px;min-height:35px;padding:8px 11px}
+}
+@media(min-width:701px){.mobile-map-region{display:none}}

@@ -32,11 +32,11 @@ function ingest(wb){
   const saved=state.coords[id];const cached=!state.demoMode&&saved&&saved.address===address?saved:null;
   entries.push({id,name:norm(r['상호(가상)']),owner:norm(r['대표자(가상)']),district,address,registered:norm(r['등록일(가상)']),status:norm(r['영업상태']),phone:norm(r['전화번호(가상)']||r['전화번호']),r,perf:pMap.get(id)||[],checks:cMap.get(id)||[],risk:risk,grade:['고위험','주의','일반'].includes(norm(risk['위험등급']))?norm(risk['위험등급']):'미평가',score:num(risk['위험도합계']),lat:cached?cached.lat:validCoord?lat:null,lng:cached?cached.lng:validCoord?lng:null,geoStatus:cached?'확인완료':validCoord?(norm(r['지오코딩상태']).includes('시연용')?'시연용 분산좌표':'제공좌표'):'미확인'});
  }
- state.companies=entries;refreshAreaOptions();$('district').value='';$('mobileDistrict').value='';state.selected=null;closeSheet();filter();renderDetail();setStatus(`업체 ${entries.length}개 로드 완료 (가상자료) · 좌표 미확인 ${entries.filter(c=>c.lat===null).length}건`);if(state.geocoder)geocodeAll();
+ state.companies=entries;refreshAreaOptions();$('district').value='';$('mobileDistrict').value='';$('mobileMapDistrict').value='';state.selected=null;closeSheet();filter();renderDetail();setStatus(`업체 ${entries.length}개 로드 완료 (가상자료) · 좌표 미확인 ${entries.filter(c=>c.lat===null).length}건`);if(state.geocoder)geocodeAll();
 }
 function refreshAreaOptions(){
  const areas=[...new Set(state.companies.map(c=>c.district).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'ko'));
- for(const id of ['district','mobileDistrict']){
+ for(const id of ['district','mobileDistrict','mobileMapDistrict']){
   const sel=$(id);sel.replaceChildren();const all=document.createElement('option');all.value='';all.textContent='전체 지역';sel.append(all);
   for(const a of areas){const op=document.createElement('option');op.value=a;op.textContent=a;sel.append(op);}
  }
@@ -55,8 +55,8 @@ function syncStatFilters(){
   b.classList.toggle('active',selected);b.setAttribute('aria-pressed',String(selected));
  }
 }
-function filter(){const s=norm($('search').value).toLowerCase(),d=$('district').value,g=$('risk').value;state.results=state.companies.filter(c=>(!d||c.district===d)&&(!g||(g==='좌표 미확인'?c.lat===null:c.grade===g))&&(!s||[c.name,c.owner,c.address,c.id].some(v=>v.toLowerCase().includes(s))));renderList();renderMarkers();updateCounts();syncRiskButtons();syncStatFilters();}
-function updateCounts(){const c=state.companies;$('countAll').textContent=fmt(c.length);$('countHigh').textContent=fmt(c.filter(x=>x.grade==='고위험').length);$('countMid').textContent=fmt(c.filter(x=>x.grade==='주의').length);$('countLow').textContent=fmt(c.filter(x=>x.grade==='일반').length);$('countMapped').textContent=fmt(c.filter(x=>x.lat!==null).length);$('rowsLabel').textContent=`${state.results.length}개 표시`; if($('mobileMapCount'))$('mobileMapCount').textContent=`표시 대상 ${state.results.length}개 · 지도 ${state.results.filter(x=>x.lat!==null).length}개`; }
+function filter(){const s=norm($('search').value).toLowerCase(),d=$('district').value,g=$('risk').value;if($('mobileMapDistrict'))$('mobileMapDistrict').value=d;if($('mobileDistrict'))$('mobileDistrict').value=d;state.results=state.companies.filter(c=>(!d||c.district===d)&&(!g||(g==='좌표 미확인'?c.lat===null:c.grade===g))&&(!s||[c.name,c.owner,c.address,c.id].some(v=>v.toLowerCase().includes(s))));renderList();renderMarkers();updateCounts();syncRiskButtons();syncStatFilters();}
+function updateCounts(){const c=state.companies;$('countAll').textContent=fmt(c.length);$('countHigh').textContent=fmt(c.filter(x=>x.grade==='고위험').length);$('countMid').textContent=fmt(c.filter(x=>x.grade==='주의').length);$('countLow').textContent=fmt(c.filter(x=>x.grade==='일반').length);$('countMapped').textContent=fmt(c.filter(x=>x.lat!==null).length);$('rowsLabel').textContent=`${state.results.length}개 표시`; if($('mobileMapCount'))$('mobileMapCount').textContent=`${state.results.length}개`; }
 function riskClass(grade){return grade==='고위험'?'high':grade==='주의'?'mid':grade==='일반'?'low':'gray'}
 function renderList(){renderMobileRows();const list=$('companyList');list.replaceChildren();for(const c of state.results){const el=document.createElement('div');el.className='company'+(c.id===state.selected?' active':'');el.innerHTML=`<i class="risk-dot ${riskClass(c.grade)}"></i><div><div class="company-name">${esc(c.name)}</div><div class="company-sub">${esc(c.id)} · ${esc(c.district)} · ${esc(c.grade)} ${c.score}점</div><small>${c.lat===null?'⚪ 좌표 미확인':'📍 지도 표시 가능'} · ${esc(c.status)}</small></div>`;el.onclick=()=>selectCompany(c.id,true);list.append(el);}}
 function field(k,v){return `<div class="field"><label>${esc(k)}</label><strong>${esc(label(v))}</strong></div>`}
@@ -172,6 +172,7 @@ $('mobileSheetClose').onclick=closeSheet;
 $('mobileAllBtn').onclick=fitAllMarkers;
 $('mobileSearch').addEventListener('input',e=>{$('search').value=e.target.value;filter();});
 $('mobileDistrict').addEventListener('change',e=>{$('district').value=e.target.value;filter();});
+$('mobileMapDistrict').addEventListener('change',e=>{$('district').value=e.target.value;filter();});
 $('mobileRisk').addEventListener('change',e=>{$('risk').value=e.target.value;filter();});
 $('mobileFilterBtn').onclick=()=>{document.activeElement?.blur();filter();const result=state.results;if(result.length===1){selectCompany(result[0].id,true);}else if($('main').dataset.mobileTab==='map'){fitAllMarkers();}else{setMobileTab('list');}};
 $('search').addEventListener('input',()=>{$('mobileSearch').value=$('search').value;});
@@ -181,7 +182,7 @@ window.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet();if(e.key=
 
 (async function bootDemo(){
  try{
-  const resp=await fetch('./demo-data.json?v=0.5.4');if(!resp.ok)throw Error('HTTP '+resp.status);
+  const resp=await fetch('./demo-data.json?v=0.5.5');if(!resp.ok)throw Error('HTTP '+resp.status);
   const data=await resp.json();const wb={Sheets:{}};
   for(const [name,rows] of Object.entries(data))wb.Sheets[name]={__rows:rows};
   // readTable() supports compact pre-parsed demo data and ordinary XLSX imports.
